@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Structure Generator | Project Builder</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d30;
+            --bg-hover: #37373d;
+            --bg-active: #094771;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --text-highlight: #ffffff;
+            --accent: #007acc;
+            --accent-hover: #1c97ea;
+            --border: #3c3c3c;
+            --success: #4ec9b0;
+            --warning: #dcdcaa;
+            --error: #f14c4c;
+            --folder: #dcb67a;
+            --file: #9cdcfe;
+            --scrollbar-bg: #1e1e1e;
+            --scrollbar-thumb: #424242;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent) 0%, #00aaff 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .logo h1 {
+            font-size: 18px;
+            font-weight: 600;
+            background: linear-gradient(90deg, var(--text-highlight), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 122, 204, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: var(--bg-primary);
+        }
+
+        .btn-success:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .btn-danger:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            height: calc(100vh - 60px);
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+        }
+
+        /* Input Panel */
+        .input-panel {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 15px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .input-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .textarea-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .structure-input {
+            width: 100%;
+            height: 100%;
+            min-height: 300px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+            color: var(--text-primary);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .structure-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.2);
+        }
+
+        .structure-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .input-actions .btn {
+            flex: 1;
+            justify-content: center;
+            min-width: 120px;
+        }
+
+        /* Explorer Panel */
+        .explorer-panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .explorer-toolbar {
+            padding: 10px 15px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .explorer-toolbar .btn {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .explorer-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* File Explorer */
+        .file-explorer {
+            width: 280px;
+            min-width: 200px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        @media (max-width: 700px) {
+            .file-explorer {
+                width: 220px;
+                min-width: 180px;
+            }
+        }
+
+        .explorer-title {
+            padding: 8px 15px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tree-item {
+            user-select: none;
+        }
+
+        .tree-item-content {
+            display: flex;
+            align-items: center;
+            padding: 4px 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border-left: 2px solid transparent;
+        }
+
+        .tree-item-content:hover {
+            background: var(--bg-hover);
+        }
+
+        .tree-item-content.active {
+            background: var(--bg-active);
+            border-left-color: var(--accent);
+        }
+
+        .tree-item-content.selected {
+            background: rgba(0, 122, 204, 0.2);
+        }
+
+        .tree-icon {
+            width: 18px;
+            height: 18px;
+            margin-right: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .tree-icon.folder-icon {
+            color: var(--folder);
+        }
+
+        .tree-icon.file-icon {
+            color: var(--file);
+        }
+
+        .tree-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        .tree-name {
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tree-children {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .tree-children.collapsed {
+            max-height: 0 !important;
+        }
+
+        .context-menu {
+            position: fixed;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            min-width: 160px;
+            padding: 4px 0;
+            display: none;
+            animation: fadeIn 0.15s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .context-menu.show {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s ease;
+        }
+
+        .context-menu-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .context-menu-item.danger {
+            color: var(--error);
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
+        /* Code Editor */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-primary);
+        }
+
+        .editor-tabs {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            min-height: 36px;
+        }
+
+        .editor-tab {
+            padding: 8px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            border-right: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            white-space: nowrap;
+            transition: all 0.15s ease;
+        }
+
+        .editor-tab:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .editor-tab.active {
+            background: var(--bg-primary);
+            color: var(--text-highlight);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .tab-close {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.15s ease;
+        }
+
+        .editor-tab:hover .tab-close,
+        .editor-tab.active .tab-close {
+            opacity: 1;
+        }
+
+        .tab-close:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-editor {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            border: none;
+            padding: 20px;
+            color: var(--text-primary);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            tab-size: 4;
+        }
+
+        .code-editor:focus {
+            outline: none;
+        }
+
+        .editor-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .editor-placeholder-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .editor-placeholder-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .editor-placeholder-hint {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        .status-bar {
+            padding: 4px 15px;
+            background: var(--accent);
+            color: white;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.25s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-highlight);
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease forwards;
+            animation-delay: 0s, 2.7s;
+            max-width: 350px;
+        }
+
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--error); }
+        .toast.warning { border-left-color: var(--warning); }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100px); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Drag & Drop Styles */
+        .drag-over {
+            background: rgba(0, 122, 204, 0.2) !important;
+        }
+
+        .dragging {
+            opacity: 0.5;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Breadcrumb */
+        .breadcrumb {
+            padding: 8px 15px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .breadcrumb span:hover {
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            padding: 8px 15px;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 900px) {
+            .header {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .header-actions {
+                order: 3;
+                width: 100%;
+            }
+
+            .main-container {
+                height: auto;
+                min-height: calc(100vh - 80px);
+            }
+
+            .input-panel {
+                max-height: 350px;
+            }
+
+            .explorer-content {
+                flex-direction: column;
+                min-height: 500px;
+            }
+
+            .file-explorer {
+                width: 100%;
+                max-height: 250px;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .editor-area {
+                min-height: 400px;
+            }
+        }
+
+        /* Tooltip */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 5px 10px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 11px;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        [data-tooltip]:hover::after {
+            opacity: 1;
+            visibility: visible;
+            bottom: calc(100% + 5px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">📁</div>
+            <h1>File Structure Generator</h1>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="clearAll()" data-tooltip="Clear All">
+                🗑️ Clear
+            </button>
+            <button class="btn btn-success" onclick="downloadZIP()" data-tooltip="Download as ZIP">
+                📦 Download ZIP
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Input Panel -->
+        <aside class="input-panel">
+            <div class="panel-header">
+                📝 Structure Input
+            </div>
+            <div class="input-area">
+                <div class="textarea-wrapper">
+                    <textarea 
+                        class="structure-input" 
+                        id="structureInput"
+                        placeholder="Paste your folder/file structure here...
+
+Example:
+whatsapp-bot-baileys/
+├── main.js
+├── config.js
+├── package.json
+├── lib/
+│   ├── connection.js
+│   └── utils.js
+└── commands/
+    ├── menu.js
+    └── ai.js"
+
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+                <div class="input-actions">
+                    <button class="btn btn-primary" onclick="generateStructure()">
+                        ⚡ Generate
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadExample()">
+                        📋 Load Example
+                    </button>
+                    <button class="btn btn-secondary" onclick="saveToStorage()">
+                        💾 Save
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadFromStorage()">
+                        📂 Load Saved
+                    </button>
+                </div>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item">📁 Folders: <span class="stat-value" id="folderCount">0</span></div>
+                <div class="stat-item">📄 Files: <span class="stat-value" id="fileCount">0</span></div>
+            </div>
+        </aside>
+
+        <!-- Explorer Panel -->
+        <main class="explorer-panel">
+            <div class="explorer-toolbar">
+                <button class="btn btn-secondary" onclick="createNewFile()" data-tooltip="Create New File">
+                    📄 New File
+                </button>
+                <button class="btn btn-secondary" onclick="createNewFolder()" data-tooltip="Create New Folder">
+                    📁 New Folder
+                </button>
+                <button class="btn btn-secondary" onclick="expandAll()" data-tooltip="Expand All">
+                    🔽 Expand
+                </button>
+                <button class="btn btn-secondary" onclick="collapseAll()" data-tooltip="Collapse All">
+                    🔼 Collapse
+                </button>
+            </div>
+
+            <div class="explorer-content">
+                <!-- File Explorer -->
+                <div class="file-explorer" id="fileExplorer">
+                    <div class="explorer-title">📂 EXPLORER</div>
+                    <div id="treeContainer">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🌳</div>
+                            <div class="empty-state-text">
+                                Paste your structure and click<br><strong>Generate</strong> to build your project
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Editor Area -->
+                <div class="editor-area">
+                    <div class="editor-tabs" id="editorTabs"></div>
+                    <div class="editor-container" id="editorContainer">
+                        <div class="editor-placeholder" id="editorPlaceholder">
+                            <div class="editor-placeholder-icon">📝</div>
+                            <div class="editor-placeholder-text">No file selected</div>
+                            <div class="editor-placeholder-hint">Click on a file in the explorer to edit its content</div>
+                        </div>
+                        <textarea 
+                            class="code-editor" 
+                            id="codeEditor"
+                            style="display: none;"
+                            placeholder="Start typing..."
+                            spellcheck="false"
+                        ></textarea>
+                    </div>
+                    <div class="status-bar">
+                        <span id="statusText">Ready</span>
+                        <span id="cursorPosition">Ln 1, Col 1</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="contextAction('rename')">
+            ✏️ Rename
+        </div>
+        <div class="context-menu-item" onclick="contextAction('newFile')">
+            📄 New File
+        </div>
+        <div class="context-menu-item" onclick="contextAction('newFolder')">
+            📁 New Folder
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" onclick="contextAction('delete')">
+            🗑️ Delete
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header" id="modalTitle">Modal Title</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" id="modalLabel">Name:</label>
+                    <input type="text" class="form-input" id="modalInput" autofocus>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" id="modalConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ============================================
+        // FILE STRUCTURE GENERATOR - MAIN APPLICATION
+        // ============================================
+
+        // Global State
+        let fileSystem = {};
+        let openTabs = [];
+        let activeTab = null;
+        let selectedNode = null;
+        let contextTarget = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+            setupEventListeners();
+        });
+
+        // Event Listeners Setup
+        function setupEventListeners() {
+            // Close context menu on click outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.context-menu')) {
+                    hideContextMenu();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 's') {
+                        e.preventDefault();
+                        saveToStorage();
+                    } else if (e.key === 'Enter' && e.target.id === 'structureInput') {
+                        e.preventDefault();
+                        generateStructure();
+                    }
+                }
+            });
+
+            // Code editor events
+            const codeEditor = document.getElementById('codeEditor');
+            codeEditor.addEventListener('input', onEditorChange);
+            codeEditor.addEventListener('keyup', updateCursorPosition);
+            codeEditor.addEventListener('click', updateCursorPosition);
+
+            // Modal input enter key
+            document.getElementById('modalInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('modalConfirm').click();
+                }
+            });
+        }
+
+        // ============================================
+        // PARSER - Core Functionality
+        // ============================================
+
+        /**
+         * Parse tree structure string into nested object
+         * This is the CRITICAL function that cleans all tree symbols
+         */
+        function parseTreeStructure(input) {
+            const lines = input.split('\n');
+            const root = {};
+
+            // Track the current path at each depth level
+            const pathStack = [{ node: root, name: '' }];
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+
+                // Skip empty lines
+                if (!line.trim()) continue;
+
+                // STEP 1: Calculate indentation level by counting visual depth
+                // Replace tree symbols with spaces for calculation
+                const cleanedForDepth = line
+                    .replace(/[├└│]/g, ' ')  // Replace tree symbols with space
+                    .replace(/─/g, '');       // Remove horizontal lines
+
+                // Count leading whitespace (tabs or spaces)
+                const depthMatch = cleanedForDepth.match(/^(\s*)/);
+                const leadingSpaces = depthMatch ? depthMatch[1].length : 0;
+                
+                // Each indentation level is typically 2 or 4 characters
+                // We detect it dynamically based on the pattern
+                const indentSize = detectIndentSize(lines);
+                const currentDepth = Math.floor(leadingSpaces / Math.max(indentSize, 2));
+
+                // STEP 2: Extract clean filename - REMOVE ALL TREE SYMBOLS
+                let cleanName = line
+                    .replace(/[├└│─\s]+/g, ' ')  // Replace all tree symbols and multiple spaces with single space
+                    .trim();
+
+                // Skip if empty after cleaning
+                if (!cleanName) continue;
+
+                // Remove trailing slash for folders but keep track that it's a folder
+                const isFolder = cleanName.endsWith('/') || cleanName.endsWith('\\');
+                cleanName = cleanName.replace(/[\/\\]$/, '');
+
+                // Skip if still empty
+                if (!cleanName) continue;
+
+                // STEP 3: Navigate to correct parent based on depth
+                while (pathStack.length > currentDepth + 1) {
+                    pathStack.pop();
+                }
+
+                const parentObj = pathStack[pathStack.length - 1].node;
+
+                // STEP 4: Create entry in the structure
+                if (isFolder) {
+                    // It's a folder - create an object
+                    if (!parentObj[cleanName]) {
+                        parentObj[cleanName] = {};
+                    }
+                    pathStack.push({ node: parentObj[cleanName], name: cleanName });
+                } else {
+                    // It's a file - create with empty content
+                    if (!parentObj[cleanName]) {
+                        parentObj[cleanName] = '';
+                    }
+                }
+            }
+
+            return root;
+        }
+
+        /**
+         * Detect the indentation size used in the tree structure
+         */
+        function detectIndentSize(lines) {
+            for (const line of lines) {
+                if (line.match(/[├└]/)) {
+                    const match = line.match(/^(\s*)[├└]/);
+                    if (match && match[1].length > 0) {
+                        return match[1].length;
+                    }
+                }
+            }
+            return 4; // Default fallback
+        }
+
+        /**
+         * Alternative parser - more robust approach
+         * Uses regex to completely strip tree symbols before processing
+         */
+        function parseTreeStructureRobust(input) {
+            const result = {};
+            const lines = input.split('\n').filter(line => line.trim());
+            
+            // Build a flat list of items with their depths first
+            const items = [];
+            
+            for (const rawLine of lines) {
+                // Completely remove ALL tree symbols and get clean info
+                const processed = processLine(rawLine);
+                if (processed.name) {
+                    items.push(processed);
+                }
+            }
+
+            // Now build the nested structure
+            const stack = [{ obj: result, depth: -1 }];
+
+            for (const item of items) {
+                // Find the right parent by going up the stack
+                while (stack.length > 1 && stack[stack.length - 1].depth >= item.depth) {
+                    stack.pop();
+                }
+
+                const parent = stack[stack.length - 1].obj;
+
+                if (item.isFolder) {
+                    parent[item.name] = {};
+                    stack.push({ obj: parent[item.name], depth: item.depth });
+                } else {
+                    parent[item.name] = '';
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         * Process a single line and extract clean name, depth, and type
+         */
+        function processLine(line) {
+            // Original line for reference
+            const originalLine = line;
+            
+            // Step 1: Remove all tree drawing characters
+            let cleaned = line
+                .replace(/[├└│]/g, ' ')  // Box drawing chars -> space
+                .replace(/─+/g, '')      // Horizontal lines -> remove
+                .trim();
+
+            // If nothing left after cleaning, skip
+            if (!cleaned) return { name: null, depth: 0, isFolder: false };
+
+            // Step 2: Determine if it's a folder (ends with / or \)
+            const isFolder = /[\/\\]$/.test(cleaned);
+            
+            // Step 3: Get clean name (remove trailing slash)
+            let name = cleaned.replace(/[\/\\]$/, '').trim();
+
+            // Step 4: Calculate depth from original line
+            // Count the tree symbols/spaces before the actual content
+            const depthMatch = originalLine.match(/^[\s├└│─]*/);
+            const prefixLength = depthMatch ? depthMatch[0].length : 0;
+            
+            // Estimate depth (each level is roughly 4 characters)
+            const depth = Math.floor(prefixLength / 4);
+
+            return { name, depth, isFolder };
+        }
+
+        // Main generation function
+        function generateStructure() {
+            const input = document.getElementById('structureInput').value.trim();
+            
+            if (!input) {
+                showToast('Please paste a file structure first', 'warning');
+                return;
+            }
+
+            try {
+                // Use the robust parser
+                fileSystem = parseTreeStructureRobust(input);
+                
+                // Render the file explorer
+                renderFileExplorer();
+                updateStats();
+                
+                showToast(`Structure generated successfully!`, 'success');
+                document.getElementById('statusText').textContent = 'Structure generated';
+            } catch (error) {
+                console.error('Parse error:', error);
+                showToast('Error parsing structure. Please check the format.', 'error');
+            }
+        }
+
+        // ============================================
+        // FILE EXPLORER RENDERING
+        // ============================================
+
+        function renderFileExplorer() {
+            const container = document.getElementById('treeContainer');
+            
+            if (Object.keys(fileSystem).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🌳</div>
+                        <div class="empty-state-text">
+                            Paste your structure and click<br><strong>Generate</strong> to build your project
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = renderTreeNode(fileSystem, '', true);
+            attachTreeEventListeners();
+        }
+
+        function renderTreeNode(node, path, isRoot = false) {
+            let html = '';
+            const entries = Object.entries(node).sort((a, b) => {
+                // Folders first, then files
+                const aIsFolder = typeof a[1] === 'object';
+                const bIsFolder = typeof b[1] === 'object';
+                if (aIsFolder !== bIsFolder) return bIsFolder ? 1 : -1;
+                return a[0].localeCompare(b[0]);
+            });
+
+            for (const [name, value] of entries) {
+                const fullPath = path ? `${path}/${name}` : name;
+                const isFolder = typeof value === 'object';
+
+                if (isFolder) {
+                    html += `
+                        <div class="tree-item" data-path="${fullPath}" data-type="folder">
+                            <div class="tree-item-content" onclick="toggleFolder(this)" oncontextmenu="showContextMenu(event, '${fullPath}', 'folder')">
+                                <span class="tree-icon folder-icon">▶</span>
+                                <span class="tree-icon folder-icon">📁</span>
+                                <span class="tree-name">${escapeHtml(name)}</span>
+                            </div>
+                            <div class="tree-children collapsed">
+                                ${renderTreeNode(value, fullPath)}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="tree-item" data-path="${fullPath}" data-type="file">
+                            <div class="tree-item-content" onclick="openFile('${fullPath}')" oncontextmenu="showContextMenu(event, '${fullPath}', 'file')">
+                                <span class="tree-icon" style="visibility:hidden;">▶</span>
+                                <span class="tree-icon file-icon">${getFileIcon(name)}</span>
+                                <span class="tree-name">${escapeHtml(name)}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            return html;
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                js: '📜',
+                ts: '💠',
+                jsx: '⚛️',
+                tsx: '⚛️',
+                json: '📋',
+                html: '🌐',
+                css: '🎨',
+                scss: '🎨',
+                less: '🎨',
+                md: '📝',
+                txt: '📄',
+                py: '🐍',
+                java: '☕',
+                php: '🐘',
+                rb: '💎',
+                go: '🐹',
+                rs: '🦀',
+                c: '🔧',
+                cpp: '🔧',
+                h: '📚',
+                sh: '🖥️',
+                bash: '🖥️',
+                sql: '🗃️',
+                yaml: '⚙️',
+                yml: '⚙️',
+                xml: '📰',
+                svg: '🖼️',
+                png: '🖼️',
+                jpg: '🖼️',
+                gif: '🖼️',
+                env: '🔒',
+                gitignore: '🚫',
+                dockerfile: '🐳',
+                lock: '🔒',
+                log: '📊'
+            };
+            return icons[ext] || '📄';
+        }
+
+        function attachTreeEventListeners() {
+            // Add drag and drop support
+            const items = document.querySelectorAll('.tree-item-content');
+            items.forEach(item => {
+                item.draggable = true;
+                
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragleave', handleDragLeave);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        // ============================================
+        // TREE INTERACTIONS
+        // ============================================
+
+        function toggleFolder(element) {
+            const treeItem = element.closest('.tree-item');
+            const children = treeItem.querySelector(':scope > .tree-children');
+            const arrow = element.querySelector('.folder-icon:first-child');
+
+            if (children) {
+                children.classList.toggle('collapsed');
+                arrow?.classList.toggle('expanded');
+            }
+
+            // Also select/highlight
+            document.querySelectorAll('.tree-item-content.active').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.tree-children').forEach(el => el.classList.remove('collapsed'));
+            document.querySelectorAll('.tree-item .folder-icon:first-child').forEach(el => el.classList.add('expanded'));
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.tree-children').forEach(el => el.classList.add('collapsed'));
+            document.querySelectorAll('.tree-item .folder-icon:first-child').forEach(el => el.classList.remove('expanded'));
+        }
+
+        // ============================================
+        // FILE OPERATIONS
+        // ============================================
+
+        function openFile(path) {
+            // Update active state in tree
+            document.querySelectorAll('.tree-item-content.active').forEach(el => el.classList.remove('active'));
+            event.target.closest('.tree-item-content')?.classList.add('active');
+
+            // Check if tab already exists
+            const existingTab = openTabs.find(t => t.path === path);
+            if (existingTab) {
+                switchToTab(path);
+                return;
+            }
+
+            // Get file content
+            const content = getFileContent(path);
+            const fileName = path.split('/').pop();
+
+            // Create new tab
+            openTabs.push({ path, name: fileName, modified: false });
+            renderTabs();
+            switchToTab(path);
+
+            document.getElementById('statusText').textContent = `Opened: ${fileName}`;
+        }
+
+        function getFileContent(path) {
+            const parts = path.split('/');
+            let current = fileSystem;
+
+            for (let i = 0; i < parts.length; i++) {
+                if (i === parts.length - 1) {
+                    return current[parts[i]] || '';
+                }
+                current = current[parts[i]];
+                if (!current) return '';
+            }
+
+            return '';
+        }
+
+        function setFileContent(path, content) {
+            const parts = path.split('/');
+            let current = fileSystem;
+
+            for (let i = 0; i < parts.length; i++) {
+                if (i === parts.length - 1) {
+                    current[parts[i]] = content;
+                    return;
+                }
+                if (!current[parts[i]]) {
+                    current[parts[i]] = {};
+                }
+                current = current[parts[i]];
+            }
+        }
+
+        function switchToTab(path) {
+            activeTab = path;
+            const tab = openTabs.find(t => t.path === path);
+            
+            if (tab) {
+                const editor = document.getElementById('codeEditor');
+                const placeholder = document.getElementById('editorPlaceholder');
+                
+                editor.style.display = 'block';
+                placeholder.style.display = 'none';
+                editor.value = getFileContent(path);
+                
+                renderTabs();
+                updateCursorPosition();
+            }
+        }
+
+        function closeTab(path, event) {
+            if (event) event.stopPropagation();
+            
+            const index = openTabs.findIndex(t => t.path === path);
+            if (index === -1) return;
+
+            openTabs.splice(index, 1);
+
+            if (activeTab === path) {
+                if (openTabs.length > 0) {
+                    const newIndex = Math.min(index, openTabs.length - 1);
+                    switchToTab(openTabs[newIndex].path);
+                } else {
+                    activeTab = null;
+                    document.getElementById('codeEditor').style.display = 'none';
+                    document.getElementById('editorPlaceholder').style.display = 'flex';
+                }
+            }
+
+            renderTabs();
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('editorTabs');
+            
+            container.innerHTML = openTabs.map(tab => `
+                <div class="editor-tab ${tab.path === activeTab ? 'active' : ''}" onclick="switchToTab('${tab.path}')">
+                    ${getFileIcon(tab.name)}
+                    <span>${escapeHtml(tab.name)}${tab.modified ? ' ●' : ''}</span>
+                    <span class="tab-close" onclick="closeTab('${tab.path}', event)">×</span>
+                </div>
+            `).join('');
+        }
+
+        function onEditorChange() {
+            if (activeTab) {
+                const tab = openTabs.find(t => t.path === activeTab);
+                if (tab) {
+                    setFileContent(activeTab, document.getElementById('codeEditor').value);
+                    tab.modified = true;
+                    renderTabs();
+                }
+            }
+        }
+
+        function updateCursorPosition() {
+            const editor = document.getElementById('codeEditor');
+            const text = editor.value.substring(0, editor.selectionStart);
+            const lines = text.split('\n');
+            const line = lines.length;
+            const col = lines[lines.length - 1].length + 1;
+            document.getElementById('cursorPosition').textContent = `Ln ${line}, Col ${col}`;
+        }
+
+        // ============================================
+        // CREATE / RENAME / DELETE
+        // ============================================
+
+        function createNewFile(parentPath = '') {
+            showModal('Create New File', 'File name:', 'Create', (name) => {
+                if (!name) return;
+                
+                // Add extension if not present
+                if (!name.includes('.')) {
+                    name += '.js';
+                }
+
+                const path = parentPath ? `${parentPath}/${name}` : name;
+                
+                if (getNodeByPath(path)) {
+                    showToast('File already exists!', 'error');
+                    return;
+                }
+
+                setFileContent(path, '');
+                renderFileExplorer();
+                updateStats();
+                openFile(path);
+                showToast(`Created: ${name}`, 'success');
+            });
+        }
+
+        function createNewFolder(parentPath = '') {
+            showModal('Create New Folder', 'Folder name:', 'Create', (name) => {
+                if (!name) return;
+
+                const path = parentPath ? `${parentPath}/${name}` : name;
+                
+                if (getNodeByPath(path)) {
+                    showToast('Folder already exists!', 'error');
+                    return;
+                }
+
+                setNodeByPath(path, {});
+                renderFileExplorer();
+                updateStats();
+                showToast(`Created folder: ${name}`, 'success');
+            });
+        }
+
+        function renameNode(path, type) {
+            const oldName = path.split('/').pop();
+            showModal(`Rename ${type}`, 'New name:', 'Rename', (newName) => {
+                if (!newName || newName === oldName) return;
+
+                const parentPath = path.substring(0, path.lastIndexOf('/'));
+                const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+
+                // Get the node
+                const node = getNodeByPath(path);
+                if (!node) return;
+
+                // Delete old and create new
+                deleteNodeByPath(path);
+                setNodeByPath(newPath, node);
+
+                // Update tabs if it's a file
+                if (type === 'file') {
+                    const tabIndex = openTabs.findIndex(t => t.path === path);
+                    if (tabIndex !== -1) {
+                        openTabs[tabIndex].path = newPath;
+                        openTabs[tabIndex].name = newName;
+                        if (activeTab === path) activeTab = newPath;
+                    }
+                }
+
+                renderFileExplorer();
+                renderTabs();
+                showToast(`Renamed to: ${newName}`, 'success');
+            }, oldName);
+        }
+
+        function deleteNode(path, type) {
+            const name = path.split('/').pop();
+            
+            if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+
+            deleteNodeByPath(path);
+
+            // Close tab if open
+            if (type === 'file') {
+                closeTab(path);
+            }
+
+            renderFileExplorer();
+            updateStats();
+            showToast(`Deleted: ${name}`, 'success');
+        }
+
+        // Path-based node operations
+        function getNodeByPath(path) {
+            const parts = path.split('/');
+            let current = fileSystem;
+
+            for (const part of parts) {
+                if (current[part] === undefined) return undefined;
+                current = current[part];
+            }
+
+            return current;
+        }
+
+        function setNodeByPath(path, value) {
+            const parts = path.split('/');
+            let current = fileSystem;
+
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (!current[parts[i]]) {
+                    current[parts[i]] = {};
+                }
+                current = current[parts[i]];
+            }
+
+            current[parts[parts.length - 1]] = value;
+        }
+
+        function deleteNodeByPath(path) {
+            const parts = path.split('/');
+            let current = fileSystem;
+
+            for (let i = 0; i < parts.length - 1; i++) {
+                current = current[parts[i]];
+                if (!current) return;
+            }
+
+            delete current[parts[parts.length - 1]];
+        }
+
+        // ============================================
+        // CONTEXT MENU
+        // ============================================
+
+        function showContextMenu(event, path, type) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            contextTarget = { path, type };
+
+            const menu = document.getElementById('contextMenu');
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            menu.classList.add('show');
+        }
+
+        function hideContextMenu() {
+            document.getElementById('contextMenu').classList.remove('show');
+        }
+
+        function contextAction(action) {
+            hideContextMenu();
+            
+            if (!contextTarget) return;
+
+            switch (action) {
+                case 'rename':
+                    renameNode(contextTarget.path, contextTarget.type);
+                    break;
+                case 'newFile':
+                    createNewFile(contextTarget.type === 'folder' ? contextTarget.path : '');
+                    break;
+                case 'newFolder':
+                    createNewFolder(contextTarget.type === 'folder' ? contextTarget.path : '');
+                    break;
+                case 'delete':
+                    deleteNode(contextTarget.path, contextTarget.type);
+                    break;
+            }
+        }
+
+        // ============================================
+        // DRAG AND DROP
+        // ============================================
+
+        let draggedItem = null;
+
+        function handleDragStart(e) {
+            draggedItem = e.target.closest('.tree-item');
+            draggedItem.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            const target = e.target.closest('.tree-item');
+            if (target && target !== draggedItem) {
+                target.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.target.closest('.tree-item')?.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const target = e.target.closest('.tree-item');
+            
+            if (target && target !== draggedItem) {
+                const sourcePath = draggedItem.dataset.path;
+                const targetPath = target.dataset.path;
+                const targetType = target.dataset.type;
+
+                // Only allow dropping into folders
+                if (targetType === 'folder') {
+                    moveNode(sourcePath, targetPath);
+                }
+            }
+
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        }
+
+        function handleDragEnd() {
+            draggedItem?.classList.remove('dragging');
+            draggedItem = null;
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        }
+
+        function moveNode(sourcePath, targetFolderPath) {
+            const node = getNodeByPath(sourcePath);
+            if (!node) return;
+
+            const name = sourcePath.split('/').pop();
+            const newPath = `${targetFolderPath}/${name}`;
+
+            if (getNodeByPath(newPath)) {
+                showToast('Destination already exists!', 'error');
+                return;
+            }
+
+            deleteNodeByPath(sourcePath);
+            setNodeByPath(newPath, node);
+
+            renderFileExplorer();
+            showToast(`Moved to: ${newPath}`, 'success');
+        }
+
+        // ============================================
+        // MODAL
+        // ============================================
+
+        let modalCallback = null;
+
+        function showModal(title, label, confirmText, callback, defaultValue = '') {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalLabel').textContent = label;
+            document.getElementById('modalConfirm').textContent = confirmText;
+            document.getElementById('modalInput').value = defaultValue;
+            document.getElementById('modalOverlay').classList.add('show');
+            
+            modalCallback = callback;
+            setTimeout(() => document.getElementById('modalInput').focus(), 100);
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+            modalCallback = null;
+        }
+
+        document.getElementById('modalConfirm').addEventListener('click', () => {
+            const value = document.getElementById('modalInput').value.trim();
+            if (modalCallback) modalCallback(value);
+            closeModal();
+        });
+
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+
+        // ============================================
+        // DOWNLOAD ZIP
+        // ============================================
+
+        async function downloadZIP() {
+            if (Object.keys(fileSystem).length === 0) {
+                showToast('No files to download!', 'warning');
+                return;
+            }
+
+            try {
+                showToast('Creating ZIP archive...', 'info');
+                
+                const zip = new JSZip();
+                addToZip(zip, fileSystem, '');
+
+                const blob = await zip.generateAsync({ 
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 6 }
+                });
+
+                const projectName = Object.keys(fileSystem)[0] || 'project';
+                saveAs(blob, `${projectName}.zip`);
+                
+                showToast('ZIP downloaded successfully!', 'success');
+                document.getElementById('statusText').textContent = 'ZIP downloaded';
+            } catch (error) {
+                console.error('ZIP error:', error);
+                showToast('Error creating ZIP file', 'error');
+            }
+        }
+
+        function addToZip(zip, node, path) {
+            for (const [name, value] of Object.entries(node)) {
+                const fullPath = path ? `${path}/${name}` : name;
+                
+                if (typeof value === 'object') {
+                    // It's a folder
+                    addToZip(zip, value, fullPath);
+                } else {
+                    // It's a file
+                    zip.file(fullPath, value || '');
+                }
+            }
+        }
+
+        // ============================================
+        // LOCAL STORAGE
+        // ============================================
+
+        function saveToStorage() {
+            try {
+                const data = {
+                    fileSystem: fileSystem,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('fileStructureGenerator', JSON.stringify(data));
+                showToast('Project saved to browser storage!', 'success');
+            } catch (error) {
+                showToast('Error saving to storage', 'error');
+            }
+        }
+
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem('fileStructureGenerator');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    fileSystem = data.fileSystem || {};
+                    renderFileExplorer();
+                    updateStats();
+                    
+                    const date = new Date(data.timestamp).toLocaleString();
+                    document.getElementById('statusText').textContent = `Loaded from: ${date}`;
+                }
+            } catch (error) {
+                console.error('Load error:', error);
+            }
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+
+        function clearAll() {
+            if (!confirm('Clear all files and structure?')) return;
+            
+            fileSystem = {};
+            openTabs = [];
+            activeTab = null;
+            
+            renderFileExplorer();
+            renderTabs();
+            document.getElementById('codeEditor').style.display = 'none';
+            document.getElementById('editorPlaceholder').style.display = 'flex';
+            updateStats();
+            
+            showToast('Cleared all', 'success');
+        }
+
+        function loadExample() {
+            document.getElementById('structureInput').value = `whatsapp-bot-baileys/
+├── main.js
+├── config.js
+├── package.json
+├── lib/
+│   ├── connection.js
+│   └── utils.js
+└── commands/
+    ├── menu.js
+    └── ai.js`;
+            
+            showToast('Example loaded! Click Generate to create.', 'info');
+        }
+
+        function updateStats() {
+            let folders = 0;
+            let files = 0;
+
+            function count(node) {
+                for (const value of Object.values(node)) {
+                    if (typeof value === 'object') {
+                        folders++;
+                        count(value);
+                    } else {
+                        files++;
+                    }
+                }
+            }
+
+            count(fileSystem);
+
+            document.getElementById('folderCount').textContent = folders;
+            document.getElementById('fileCount').textContent = files;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+            toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
